@@ -124,7 +124,7 @@ def execStrat(comCost=0):
 
 ####    Visualisation
 #       TODO: Break down into primitives, identify indicators, alow user-defined viz types...
-def vizStrat(comCost=0):
+def vizStrat(sigPlot=[],comCost=0):
     from bokeh.layouts import column,row
     from bokeh.plotting import figure, show
     from bkcharts import Donut
@@ -203,10 +203,13 @@ def vizStrat(comCost=0):
                   color=Blues4[1], legend="Ref")
     
     #   Signals
-    pStrat.quad(top=df['bEnterLvl'], bottom=df['bStopLvl'], left=df['Date']-df['Date'].diff(), right=df['Date'],
-      color=Greens4[2], alpha=.5, legend="Buy")
-    pStrat.quad(top=df['sStopLvl'], bottom=df['sEnterLvl'], left=df['Date']-df['Date'].diff(), right=df['Date'],
-      color=Reds4[2], alpha=.5, legend="Sell")
+    for s in sigPlot:
+        if set(['high','low','color']).issubset(s.keys()):
+            pStrat.quad(top=df[s['high']], bottom=df[s['low']], left=df['Date']-df['Date'].diff(), right=df['Date'],
+              color=s['color'], alpha=.5, legend=s['legend'] if 'legend' in s.keys() else None)
+
+        if set(['line','color']).issubset(s.keys()):
+            pStrat.line(df['Date'], df[s['line']], color=s['color'], legend=s['legend'] if 'legend' in s.keys() else s['line'])
     
     #   Trades
     x0, x1, y0, y1,col=[],[],[],[],[]

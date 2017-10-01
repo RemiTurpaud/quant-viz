@@ -37,10 +37,6 @@ def sd(per):
     return window(per).ret.std()
 
 @indicator
-def mu(per):
-    return window(per).ret.mean()
-
-@indicator
 def est(per):
     return window(per).cret.mean()
 
@@ -64,7 +60,6 @@ signPer=7
 
 #   Evaluate indicators
 sd(signPer)
-mu(signPer)
 est(signPer)
 
 bEnterLvl()
@@ -82,4 +77,10 @@ sSellStop('cret>sStopLvl')
 execStrat()
 
 ####    Visualize results
-vizStrat()
+#   List signals to visualize
+from bokeh.palettes import Greens4,Reds4
+sig=[
+     {'high':'bEnterLvl','low':'bStopLvl','color':Greens4[2],'legend':'Buy'},
+     {'high':'sEnterLvl','low':'sStopLvl','color':Reds4[2],'legend':'Sell'}     
+    ]
+vizStrat(sig)
