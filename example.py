@@ -34,11 +34,11 @@ buildOlhc(ts)
 ####    Define indicators
 @indicator
 def sd(per):
-    return window(per).ret.std()
+    return window(per).lr.std()
 
 @indicator
 def est(per):
-    return window(per).cret.mean()
+    return window(per).clr.mean()
 
 #   Levels
 @indicator
@@ -68,10 +68,10 @@ bStopLvl()
 sStopLvl()
 
 ####    Evaluate signals
-sBuy('cret>bEnterLvl')
-sSell('cret<sEnterLvl')
-sBuyStop('cret<bStopLvl')
-sSellStop('cret>sStopLvl')
+sBuy('clr>bEnterLvl')
+sSell('clr<sEnterLvl')
+sBuyStop('clr<bStopLvl')
+sSellStop('clr>sStopLvl')
 
 ####    Execute strategy
 execStrat()

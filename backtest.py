@@ -21,10 +21,10 @@ def buildOlhc(ts):
         
     df[['o','h','l','c']]=ts[['o','h','l','c']].astype('float')
     df['Date']=pd.to_datetime(ts.Date,unit='s')
-    df['ret']=np.log(1+df.c.astype('float').pct_change())
-    df['hret']=np.log(df.h.astype('float')/df.c.astype('float'))
-    df['lret']=np.log(df.l.astype('float')/df.c.astype('float'))
-    df['cret']=df['ret'].cumsum()
+    df['lr']=np.log(1+df.c.astype('float').pct_change())
+    df['hlr']=np.log(df.h.astype('float')/df.c.astype('float'))
+    df['llr']=np.log(df.l.astype('float')/df.c.astype('float'))
+    df['clr']=df['lr'].cumsum()
     df.sort_values('Date',inplace=True)
     
 ####    Indicator decorator
@@ -103,11 +103,11 @@ def execStrat(comCost=0):
     
     ####    Calculate P&L
     #Bar profit
-    df['pl']=df['pBuy']*df['ret']-df['ret']*df['pSell']
+    df['pl']=df['pBuy']*df['lr']-df['lr']*df['pSell']
     #TODO   Adjust entry/exit points - for SLTP
     #       Exit
-    #df.loc[df['pBuyExit'],['pl']]=(df['bStopLvl']-(df['cret']-df['ret']))[df['pBuyExit']]
-    #df.loc[df['pSellExit'],['pl']]=-(df['sStopLvl']-(df['cret']-df['ret']))[df['pSellExit']]
+    #df.loc[df['pBuyExit'],['pl']]=(df['bStopLvl']-(df['clr']-df['lr']))[df['pBuyExit']]
+    #df.loc[df['pSellExit'],['pl']]=-(df['sStopLvl']-(df['clr']-df['lr']))[df['pSellExit']]
     
     
     #   Add commission cost
@@ -119,7 +119,7 @@ def execStrat(comCost=0):
 
     ###     Analysis
     #Total P&L
-    print(df['pl'].sum(),',',df['ret'].sum())
+    print(df['pl'].sum(),',',df['lr'].sum())
 
 
 ####    Visualisation
@@ -138,7 +138,7 @@ def vizStrat(sigPlot=[],comCost=0):
     pRet.xaxis.axis_label = 'Date'
     pRet.yaxis.axis_label = 'Return'
     
-    pRet.line(df['Date'], df['cret'], color=Blues4[1], legend='Ref')
+    pRet.line(df['Date'], df['clr'], color=Blues4[1], legend='Ref')
     pRet.line(df['Date'], df['cpl'], color=Greens4[1], legend='Strat')
     pRet.legend.location = "top_left"
     
@@ -199,7 +199,7 @@ def vizStrat(sigPlot=[],comCost=0):
     pStrat.grid.grid_line_alpha=0.3
     pStrat.xaxis.axis_label = 'Date'
     pStrat.yaxis.axis_label = 'Return'
-    pStrat.quad(top=df['cret']+df['hret'], bottom=df['cret']+df['lret'], left=df['Date']-df['Date'].diff(), right=df['Date'],
+    pStrat.quad(top=df['clr']+df['hlr'], bottom=df['clr']+df['llr'], left=df['Date']-df['Date'].diff(), right=df['Date'],
                   color=Blues4[1], legend="Ref")
     
     #   Signals
