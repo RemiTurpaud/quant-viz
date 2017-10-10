@@ -18,7 +18,8 @@ df=pd.DataFrame()
 def buildOlhc(ts):
     if not set(['Date','o','h','l','c']).issubset(ts.columns):
         raise ValueError("Data Frame must at least contain columns ['Date','o','h','l','c']")
-        
+
+    df.drop(df.index, inplace=True)        
     df[['o','h','l','c']]=ts[['o','h','l','c']].astype('float')
     df['Date']=pd.to_datetime(ts.Date,unit='s')
     df['lr']=np.log(1+df.c.astype('float').pct_change())
@@ -32,7 +33,27 @@ def indicator(ind):
     def append(*args,**kwargs):
         df[ind.__name__]=ind(*args,**kwargs)
     return append
-  
+
+@indicator
+def bSl(expr):
+    "Stop Loss level for long positions"
+    return np.nan
+
+@indicator
+def bTp(expr):
+    "Take Profit level for long positions"
+    return np.nan
+
+@indicator
+def sSl(expr):
+    "Stop Loss level for short positions"
+    return np.nan
+
+@indicator
+def sTp(expr):
+    "Take Profit level for short positions"
+    return np.nan
+    
 ####    Input functions for indicators
 #Trailing window for indicators
 def window(per):
@@ -49,13 +70,21 @@ def signal(name,expr):
     df[name]=df.eval(expr).shift(1)
     df[name].fillna(False,inplace=True)
 
-def sBuy(expr):
+def sBuy(expr,sl=None,tp=None):
     "Buy signal"
     signal('sBuy',expr)
-
-def sSell(expr):
+    if sl is not None:
+        df.loc[df['sBuy'],'bSl']=sl
+    if tp is not None:
+        df.loc[df['sBuy'],'bTp']=tp
+    
+def sSell(expr,sl=None,tp=None):
     "Sell signal"    
     signal('sSell',expr)
+    if sl is not None:   
+        df.loc[df['sSell'],'sSl']=sl
+    if tp is not None:
+        df.loc[df['sSell'],'sTp']=tp
 
 def sBuyStop(expr):
     "Stop signal for long positions"
@@ -148,6 +177,16 @@ def vizStrat(sigPlot=[],comCost=0):
     
     pie = pd.Series([(~(df.pBuy&df.pBuy)).sum(),df.pBuy.sum(),df.pSell.sum()], index = ["Idle","Long","Short"])
     pDistBar= Donut(pie ,color=[Blues4[1],Greens4[1],Reds4[1]],title='Total Trade time',plot_width=400,hover_text='Bars',toolbar_location = None)
+
+    #   Trades win/loss distribution
+    longPl=df[df.pBuyTradeNo!=0].groupby('pBuyTradeNo').pl.sum()
+    shortPl=df[df.pSellTradeNo!=0].groupby('pSellTradeNo').pl.sum()
+    
+    pie = pd.Series([(longPl<=0).sum(),(longPl>0).sum()], index = ["Loss","Win"],name='Trade Type')
+    pDistLong= Donut(pie ,color=[Reds4[1],Greens4[1]],title='Long Trades',plot_width=400,hover_text='Trades',toolbar_location = None)
+    pie = pd.Series([(shortPl<=0).sum(),(shortPl>0).sum()], index = ["Loss","Win"],name='Trade Type')
+    pDistShort= Donut(pie ,color=[Reds4[1],Greens4[1]],title='Short Trades',plot_width=400,hover_text='Trades',toolbar_location = None)
+    
     
     #   Trades return histogram
     bTradeRet=df[df.State>0].groupby('TradeNo').pl.sum()
@@ -199,13 +238,13 @@ def vizStrat(sigPlot=[],comCost=0):
     pStrat.grid.grid_line_alpha=0.3
     pStrat.xaxis.axis_label = 'Date'
     pStrat.yaxis.axis_label = 'Return'
-    pStrat.quad(top=df['clr']+df['hlr'], bottom=df['clr']+df['llr'], left=df['Date']-df['Date'].diff(), right=df['Date'],
+    pStrat.quad(top=df['h'], bottom=df['l'], left=df['Date']-df['Date'].diff().fillna(0), right=df['Date'],
                   color=Blues4[1], legend="Ref")
     
     #   Signals
     for s in sigPlot:
         if set(['high','low','color']).issubset(s.keys()):
-            pStrat.quad(top=df[s['high']], bottom=df[s['low']], left=df['Date']-df['Date'].diff(), right=df['Date'],
+            pStrat.quad(top=df[s['high']], bottom=df[s['low']], left=df['Date']-df['Date'].diff().fillna(0), right=df['Date'],
               color=s['color'], alpha=.5, legend=s['legend'] if 'legend' in s.keys() else None)
 
         if set(['line','color']).issubset(s.keys()):
@@ -218,12 +257,12 @@ def vizStrat(sigPlot=[],comCost=0):
         x1.append(g.Date.max())           
         if g.State.iloc[0]>0:
             col.append(Greens4[0])
-            y0.append(g.bEnterLvl.iloc[0])
-            y1.append(g.bStopLvl.iloc[-1])       
+            y0.append(g.c.iloc[0])
+            y1.append(g.c.iloc[-1])       
         else:
             col.append(Reds4[0])
-            y0.append(g.sEnterLvl.iloc[0])
-            y1.append(g.sStopLvl.iloc[-1])
+            y0.append(g.c.iloc[0])
+            y1.append(g.c.iloc[-1])
     pStrat.segment(x0=x0,x1=x1,y0=y0, y1=y1,color=col,line_width=1)
     pStrat.circle(x0, y0, size=3,color=col,line_color=col, fill_alpha=1)
     pStrat.circle(x1, y1, size=3,color='white',line_color=col, fill_alpha=1)
@@ -231,7 +270,7 @@ def vizStrat(sigPlot=[],comCost=0):
     pStrat .legend.location = "top_left"
     
     #Show Plots
-    board=column(pRet,row(pDistBar,pDist),row(pBarRet,pTradeRet),pStrat)
+    board=column(pRet,row(pDistBar,pDist),row(pDistLong,pDistShort),row(pBarRet,pTradeRet),pStrat)
     show(board)
     
     #Gridplot version
