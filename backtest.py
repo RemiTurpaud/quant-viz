@@ -118,10 +118,10 @@ def execStrat(comCost=0):
     df['State']=df['pBuy'].astype('int')-df['pSell'].astype('int')
     
     #       Add trade enter/exit indicators
-    df['pBuyEnter']=df['pBuy'].diff() & df['pBuy']
-    df['pSellEnter']=df['pSell'].diff() & df['pSell']
-    df['pBuyExit']=df['pBuy'].diff() & (df['sBuyStop']  | df['sSell'])
-    df['pSellExit']=df['pSell'].diff() & (df['sSellStop']  | df['sBuy'] )
+    df['pBuyEnter']=df['pBuy'].astype(int).diff().astype(bool) & df['pBuy']
+    df['pSellEnter']=df['pSell'].astype(int).diff().astype(bool) & df['pSell']
+    df['pBuyExit']=df['pBuy'].astype(int).diff().astype(bool) & (df['sBuyStop']  | df['sSell'])
+    df['pSellExit']=df['pSell'].astype(int).diff().astype(bool) & (df['sSellStop']  | df['sBuy'] )
     
     
     ####    Identify Trades
